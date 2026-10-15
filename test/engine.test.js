@@ -138,3 +138,23 @@ test("clock formats in 12 and 24 hour styles", () => {
   assert.strictEqual(G.clock(1500), "1am");
   assert.strictEqual(G.clock(1050, "24"), "17:30");
 });
+
+test("one-off calendar events are written in UTC", () => {
+  const ms = G.instant("Europe/London", 2026, 11, 2, 14, 0);
+  const ics = G.toIcs({ ms, length: 30, weekly: false, hostZone: "Europe/London", title: "Sync, weekly; team", now: ms });
+  assert.match(ics, /DTSTART:20261102T140000Z\r\n/);
+  assert.match(ics, /DTEND:20261102T143000Z\r\n/);
+  assert.ok(ics.includes("SUMMARY:Sync\\, weekly\\; team\r\n"));
+  assert.doesNotMatch(ics, /VTIMEZONE/);
+});
+
+test("weekly events repeat in the host zone with its real clock changes", () => {
+  const ms = G.instant("America/New_York", 2026, 10, 12, 9, 0);
+  const ics = G.toIcs({ ms, length: 45, weekly: true, hostZone: "America/New_York", title: "Standup", now: ms });
+  assert.match(ics, /DTSTART;TZID=America\/New_York:20261012T090000\r\n/);
+  assert.match(ics, /RRULE:FREQ=WEEKLY\r\n/);
+  // US clocks go back on 1 November 2026 at 2am, from -04:00 to -05:00.
+  assert.match(ics, /BEGIN:STANDARD\r\nDTSTART:20261101T020000\r\nTZOFFSETFROM:-0400\r\nTZOFFSETTO:-0500/);
+  assert.match(ics, /BEGIN:DAYLIGHT\r\nDTSTART:20270314T020000\r\nTZOFFSETFROM:-0500\r\nTZOFFSETTO:-0400/);
+  assert.ok(ics.split("\r\n").every((line) => Buffer.byteLength(line) <= 75));
+});

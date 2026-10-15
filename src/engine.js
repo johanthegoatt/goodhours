@@ -276,6 +276,80 @@
     return lines.join("\n");
   }
 
+  // ----- Calendar file -----
+  // One-off meetings are written in UTC. Weekly ones are written in the
+  // host's zone with a VTIMEZONE built from the real clock changes over the
+  // next two years, so the series follows the host's clock the way
+  // GoodHours plans it (RFC 5545 sections 3.6.5 and 3.8.5.3).
+
+  function icsStamp(y, m, d, h, min) {
+    return "" + y + pad(m) + pad(d) + "T" + pad(h) + pad(min) + "00";
+  }
+  function utcStamp(ms) {
+    var t = new Date(ms);
+    return icsStamp(t.getUTCFullYear(), t.getUTCMonth() + 1, t.getUTCDate(), t.getUTCHours(), t.getUTCMinutes()) + "Z";
+  }
+  function localStamp(zone, ms) {
+    var l = local(zone, ms);
+    return icsStamp(l.y, l.m, l.d, l.h, l.min);
+  }
+  function icsOffset(min) {
+    var sign = min < 0 ? "-" : "+";
+    var a = Math.abs(min);
+    return sign + pad(Math.floor(a / 60)) + pad(a % 60);
+  }
+  function icsEscape(text) {
+    return String(text).replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+  }
+  // RFC 5545 3.1: fold lines longer than 75 octets.
+  function fold(line) {
+    var out = "", bytes = 0;
+    for (var i = 0; i < line.length; i++) {
+      var size = unescape(encodeURIComponent(line[i])).length;
+      if (bytes + size > 75) { out += "\r\n "; bytes = 1; }
+      out += line[i];
+      bytes += size;
+    }
+    return out;
+  }
+
+  function vtimezone(zone, fromMs) {
+    var lines = ["BEGIN:VTIMEZONE", "TZID:" + zone];
+    var first = offset(zone, fromMs);
+    lines.push("BEGIN:STANDARD", "DTSTART:19700101T000000", "TZOFFSETFROM:" + icsOffset(first),
+      "TZOFFSETTO:" + icsOffset(first), "END:STANDARD");
+    clockChanges([zone], fromMs, 731).forEach(function (c) {
+      var kind = c.to > c.from ? "DAYLIGHT" : "STANDARD";
+      // DTSTART is the wall time just before the change, in the old offset.
+      var before = new Date(c.at + c.from * MIN);
+      lines.push("BEGIN:" + kind,
+        "DTSTART:" + icsStamp(before.getUTCFullYear(), before.getUTCMonth() + 1, before.getUTCDate(), before.getUTCHours(), before.getUTCMinutes()),
+        "TZOFFSETFROM:" + icsOffset(c.from), "TZOFFSETTO:" + icsOffset(c.to), "END:" + kind);
+    });
+    lines.push("END:VTIMEZONE");
+    return lines;
+  }
+
+  function toIcs(opts) {
+    var end = opts.ms + opts.length * MIN;
+    var lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//GoodHours//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"];
+    if (opts.weekly) lines = lines.concat(vtimezone(opts.hostZone, opts.ms));
+    lines.push("BEGIN:VEVENT",
+      "UID:" + (opts.uid || "goodhours-" + opts.ms) + "@goodhours",
+      "DTSTAMP:" + utcStamp(opts.now || Date.now()));
+    if (opts.weekly) {
+      lines.push("DTSTART;TZID=" + opts.hostZone + ":" + localStamp(opts.hostZone, opts.ms),
+        "DTEND;TZID=" + opts.hostZone + ":" + localStamp(opts.hostZone, end),
+        "RRULE:FREQ=WEEKLY");
+    } else {
+      lines.push("DTSTART:" + utcStamp(opts.ms), "DTEND:" + utcStamp(end));
+    }
+    lines.push("SUMMARY:" + icsEscape(opts.title || "Meeting"));
+    if (opts.description) lines.push("DESCRIPTION:" + icsEscape(opts.description));
+    lines.push("END:VEVENT", "END:VCALENDAR");
+    return lines.map(fold).join("\r\n") + "\r\n";
+  }
+
   // Share state in the URL fragment, which never reaches a server.
   function encode(state) {
     var p = state.people.map(function (x) {
@@ -307,7 +381,7 @@
     parseHours: parseHours, clock: clock, dateKey: dateKey, parseDate: parseDate,
     feel: feel, day: day, best: best, rotation: rotation, COST: COST,
     clockChanges: clockChanges, weeklyDrift: weeklyDrift,
-    offsetLabel: offsetLabel, dayLabel: dayLabel, inviteText: inviteText,
+    offsetLabel: offsetLabel, dayLabel: dayLabel, inviteText: inviteText, toIcs: toIcs,
     encode: encode, decode: decode, DAY_NAMES: DAY_NAMES
   };
 });

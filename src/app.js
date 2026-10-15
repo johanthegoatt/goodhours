@@ -502,6 +502,27 @@
       title: "Meeting, " + state.length + " minutes"
     }), "Invite copied. Paste it into your message or calendar.");
   });
+  // An .ics file: calendar apps on phones and desktops all open it.
+  $("add-calendar").addEventListener("click", function () {
+    var people = ready();
+    if (!chosen) return;
+    var title = "Meeting, " + state.length + " minutes";
+    var ics = G.toIcs({
+      ms: chosen, length: state.length, weekly: state.weekly, hostZone: people[0].zone,
+      title: title,
+      description: G.inviteText({ people: people, ms: chosen, length: state.length, style: state.style, weekly: state.weekly, hostCity: people[0].city, title: title })
+    });
+    var url = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "goodhours-meeting.ics";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+    $("status").textContent = "Calendar file downloaded. Open it to add the meeting" + (state.weekly ? ", every week." : ".");
+  });
+
   $("copy-link").addEventListener("click", function () {
     var url = location.href.split("#")[0] + "#" + G.encode(shareState());
     copy(url, "Link copied. Anyone who opens it sees the same people and day.");
