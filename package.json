@@ -1,0 +1,10 @@
+{
+  "name": "goodhours",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Find a meeting time that lands inside everyone's day, across time zones and clock changes. With Sol the sun.",
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "MIT"
+}
