@@ -23,6 +23,7 @@ When there is no good time at all, the fair move is to share the bad one. GitLab
 - **Clock change warnings.** For a weekly meeting, it walks the next 8 weeks in the organiser's city and lists the week each person's local time moves, with the before and after. For a one-off, it warns if any city changes its clocks within a week of the day.
 - **Typing hours.** `9-5`, `9am-5:30pm`, `08:00-16:00`, `8.30 to 4`, `10pm-6am`. "9-5" with no am or pm means 9am to 5pm.
 - **Cities.** 116 cities with their zones, found by name, word start, country, older names (Calcutta, Saigon, Kiev) or zone name, accents ignored.
+- **The right working week.** Picking a city sets that person's working days to the country's own week, not a Western one. Across much of the Middle East and North Africa (Saudi Arabia, Egypt, Israel and others) the week runs Sunday to Thursday with Friday and Saturday off, so GoodHours won't drop a call on someone's weekend; set your own days by hand to override. The UAE moved to a Monday-to-Friday week in January 2022, so it takes the default.
 - **Calendar file.** "Add to calendar" downloads an .ics. A one-off is written in UTC; a weekly meeting repeats in the organiser's zone with a VTIMEZONE built from that city's real clock changes, so the calendar moves it the same way GoodHours warns about.
 - **Sharing.** The invite text lists each person's day and time in their own city. The share link carries everyone in the URL fragment.
 
