@@ -106,6 +106,24 @@
     return h12 + (m ? ":" + pad(m) : "") + ap;
   }
 
+  // Not everyone works Monday to Friday. Across much of the Middle East and
+  // North Africa the working week is Sunday to Thursday, with Friday and
+  // Saturday the weekend, so proposing a Friday call drops it on someone's
+  // weekend. These are the Sunday-to-Thursday countries (weekend Fri + Sat).
+  // The UAE moved to a Monday-to-Friday week in January 2022, so it is not
+  // here and takes the default. Everywhere else defaults to Monday to Friday.
+  var SUN_THU = {
+    "Saudi Arabia": 1, "Qatar": 1, "Kuwait": 1, "Bahrain": 1, "Oman": 1,
+    "Egypt": 1, "Jordan": 1, "Israel": 1, "Iraq": 1, "Libya": 1,
+    "Yemen": 1, "Palestine": 1, "Syria": 1, "Sudan": 1
+  };
+
+  // The working days (0 = Sun .. 6 = Sat) to assume for a country, so a person
+  // added from a city starts with their own week rather than a Western one.
+  function defaultDays(country) {
+    return SUN_THU[country] ? [0, 1, 2, 3, 4] : [1, 2, 3, 4, 5];
+  }
+
   // How a moment feels for one person.
   //   work  - inside their working hours on a working day
   //   edge  - within an hour either side of them (early start, late finish)
@@ -380,6 +398,7 @@
     local: local, offset: offset, instant: instant, isZone: isZone,
     parseHours: parseHours, clock: clock, dateKey: dateKey, parseDate: parseDate,
     feel: feel, day: day, best: best, rotation: rotation, COST: COST,
+    defaultDays: defaultDays,
     clockChanges: clockChanges, weeklyDrift: weeklyDrift,
     offsetLabel: offsetLabel, dayLabel: dayLabel, inviteText: inviteText, toIcs: toIcs,
     encode: encode, decode: decode, DAY_NAMES: DAY_NAMES

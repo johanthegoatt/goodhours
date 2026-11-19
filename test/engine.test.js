@@ -158,3 +158,22 @@ test("weekly events repeat in the host zone with its real clock changes", () => 
   assert.match(ics, /BEGIN:DAYLIGHT\r\nDTSTART:20270314T020000\r\nTZOFFSETFROM:-0500\r\nTZOFFSETTO:-0400/);
   assert.ok(ics.split("\r\n").every((line) => Buffer.byteLength(line) <= 75));
 });
+
+test("working week defaults to the country's, Sunday to Thursday where it applies", () => {
+  assert.deepEqual(G.defaultDays("Saudi Arabia"), [0, 1, 2, 3, 4]);
+  assert.deepEqual(G.defaultDays("Israel"), [0, 1, 2, 3, 4]);
+  assert.deepEqual(G.defaultDays("Egypt"), [0, 1, 2, 3, 4]);
+  // Everywhere else, and the UAE since its January 2022 switch, is Mon-Fri.
+  assert.deepEqual(G.defaultDays("United States"), [1, 2, 3, 4, 5]);
+  assert.deepEqual(G.defaultDays("United Arab Emirates"), [1, 2, 3, 4, 5]);
+  assert.deepEqual(G.defaultDays("Narnia"), [1, 2, 3, 4, 5]);
+});
+
+test("a Sunday-to-Thursday worker is at work on Sunday and off on Friday", () => {
+  // Riyadh, 9-5 local, Sun-Thu. 2026-11-22 is a Sunday; 2026-11-20 is a Friday.
+  const person = { zone: "Asia/Riyadh", start: 540, end: 1020, days: G.defaultDays("Saudi Arabia") };
+  const sunday10 = G.instant("Asia/Riyadh", 2026, 11, 22, 10, 0);
+  const friday10 = G.instant("Asia/Riyadh", 2026, 11, 20, 10, 0);
+  assert.equal(G.feel(person, sunday10, 30), "work");
+  assert.notEqual(G.feel(person, friday10, 30), "work"); // their weekend
+});
