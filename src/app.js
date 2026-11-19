@@ -48,6 +48,7 @@
     name.value = p.name; city.value = p.city; hours.value = p.hours || hoursText(p);
 
     var days = node.querySelector(".days");
+    var dayBtns = {};
     DAY_ORDER.forEach(function (d) {
       var b = document.createElement("button");
       b.type = "button"; b.className = "day"; b.textContent = G.DAY_NAMES[d];
@@ -55,11 +56,20 @@
       b.addEventListener("click", function () {
         var on = p.days.indexOf(d) >= 0;
         p.days = on ? p.days.filter(function (x) { return x !== d; }) : p.days.concat(d);
+        p._daysTouched = true;
         b.setAttribute("aria-pressed", on ? "false" : "true");
         update();
       });
+      dayBtns[d] = b;
       days.appendChild(b);
     });
+    // Reflect p.days back onto the buttons after the working week is set from a
+    // city (Sunday-to-Thursday places prefill a different week).
+    function syncDays() {
+      DAY_ORDER.forEach(function (d) {
+        dayBtns[d].setAttribute("aria-pressed", p.days.indexOf(d) >= 0 ? "true" : "false");
+      });
+    }
 
     name.addEventListener("input", function () { p.name = name.value.trim(); update(); });
 
@@ -80,6 +90,12 @@
     function close() { sug.hidden = true; city.setAttribute("aria-expanded", "false"); city.removeAttribute("aria-activedescendant"); active = -1; }
     function choose(o) {
       p.city = o.city; p.zone = o.zone; city.value = o.city;
+      // Prefill the working week for where they are, unless they've already
+      // set their own days by hand.
+      if (!p._daysTouched) {
+        var dd = G.defaultDays(o.country);
+        if (dd.slice().sort().join() !== p.days.slice().sort().join()) { p.days = dd.slice(); syncDays(); }
+      }
       close(); update();
       Sol.react("city");
     }
